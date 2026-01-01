@@ -206,3 +206,12 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+# Poetry - игнорируем генерируемый requirements.txt
+requirements.txt
+requirements-*.txt
+
+# Можете также добавить, если используете:
+*.local
+.DS_Store
+Thumbs.db
+
