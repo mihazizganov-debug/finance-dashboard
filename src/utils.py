@@ -111,20 +111,22 @@ def load_transactions(date_string: str) -> pd.DataFrame:
 
 
 def get_greeting(date_string: str) -> str:
-    """Возвращает приветствие по времени суток."""
+    """Возвращает приветствие по времени суток по российским стандартам."""
     try:
         dt = datetime.datetime.strptime(date_string, "%Y-%m-%d %H:%M:%S")
         hour = dt.hour
 
-        if 5 <= hour < 12:
-            return "Доброе утро"
-        elif 12 <= hour < 17:
-            return "Добрый день"
-        elif 17 <= hour < 23:
-            return "Добрый вечер"
-        else:
+        if 0 <= hour < 4:
             return "Доброй ночи"
-    except (ValueError, TypeError):
+        elif 4 <= hour < 12:
+            return "Доброе утро"
+        elif 12 <= hour < 16:
+            return "Добрый день"
+        else:  # 16:00 - 23:59
+            return "Добрый вечер"
+
+    except (ValueError, TypeError) as e:
+        logger.error(f"Ошибка в get_greeting: {e}")
         return "Добрый день"
 
 
