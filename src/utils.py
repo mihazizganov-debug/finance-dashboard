@@ -1,0 +1,363 @@
+"""
+Модуль utils.py для курсовой работы.
+Вспомогательные функции для страницы "Главная".
+"""
+
+import datetime
+import json
+import logging
+import os
+import re
+from typing import Any
+
+import pandas as pd
+import requests
+from dotenv import load_dotenv
+
+# Загружаем .env
+load_dotenv()
+
+# Логирование
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+def load_transactions(date_string: str) -> pd.DataFrame:
+    """
+    Загружает транзакции из Excel файла и фильтрует по текущему месяцу.
+
+    Parameters:
+    -----------
+    date_string : str
+        Дата в формате 'YYYY-MM-DD HH:MM:SS'
+
+    Returns:
+    --------
+    pd.DataFrame
+        DataFrame с транзакциями за текущий месяц или пустой DataFrame в случае ошибки
+    """
+    try:
+        # Исправляем: используем правильные переменные
+        file_path_operations_xlsx = "data/operations.xlsx"
+        file_path_transactions_xlsx = "data/transactions_excel.xlsx"
+        file_path_transactions_xls = "data/transactions_excel.xls"
+
+        # Пробуем в порядке приоритета
+        if os.path.exists(file_path_operations_xlsx):
+            df = pd.read_excel(file_path_operations_xlsx)
+            logger.info(f"Загружен файл {file_path_operations_xlsx}")
+        elif os.path.exists(file_path_transactions_xlsx):
+            df = pd.read_excel(file_path_transactions_xlsx)
+            logger.info(f"Загружен файл {file_path_transactions_xlsx}")
+        elif os.path.exists(file_path_transactions_xls):
+            df = pd.read_excel(file_path_transactions_xls)
+            logger.info(f"Загружен файл {file_path_transactions_xls}")
+        else:
+            logger.error("Файл с транзакциями не найден.")
+            logger.error("Проверяемые пути:")
+            logger.error(f"  - {file_path_operations_xlsx}")
+            logger.error(f"  - {file_path_transactions_xlsx}")
+            logger.error(f"  - {file_path_transactions_xls}")
+            return pd.DataFrame()
+
+        # Переименовываем колонки согласно ТЗ
+        if not df.empty:
+            # Создаем словарь для переименования, но только для существующих колонок
+            column_mapping = {}
+            possible_columns = {
+                "Статус": "state",
+                "Номер карты": "from",
+                "Сумма операции": "amount",
+                "Описание": "description",
+                "Дата операции": "date",
+            }
+
+            for rus_name, eng_name in possible_columns.items():
+                if rus_name in df.columns:
+                    column_mapping[rus_name] = eng_name
+
+            if column_mapping:
+                df = df.rename(columns=column_mapping)
+                logger.info(f"Переименованы колонки: {column_mapping}")
+
+        # Фильтруем по текущему месяцу
+        if not df.empty and "date" in df.columns:
+            # Конвертируем дату если нужно
+            df["date"] = pd.to_datetime(df["date"], format="%d.%m.%Y %H:%M:%S", errors="coerce", dayfirst=True)
+
+            # Получаем начало месяца из входной даты
+            try:
+                input_date = pd.to_datetime(date_string.split()[0])
+                month_start = pd.Timestamp(year=input_date.year, month=input_date.month, day=1)
+
+                # Фильтруем данные с начала месяца
+                df = df[df["date"] >= month_start]
+                logger.info(f"Отфильтровано по месяцу: {month_start.date()}")
+            except Exception as e:
+                logger.warning(f"Ошибка фильтрации по месяцу: {e}")
+
+        # Проверяем необходимые колонки
+        required_columns = ["state", "from", "amount", "description"]
+        missing_columns = [col for col in required_columns if col not in df.columns]
+
+        if missing_columns:
+            logger.warning(f"Отсутствуют необходимые колонки: {missing_columns}")
+
+        return df
+
+    except Exception as e:
+        logger.error(f"Ошибка загрузки транзакций: {e}")
+        return pd.DataFrame()
+
+
+def get_greeting(date_string: str) -> str:
+    """Возвращает приветствие по времени суток."""
+    try:
+        dt = datetime.datetime.strptime(date_string, "%Y-%m-%d %H:%M:%S")
+        hour = dt.hour
+
+        if 5 <= hour < 12:
+            return "Доброе утро"
+        elif 12 <= hour < 17:
+            return "Добрый день"
+        elif 17 <= hour < 23:
+            return "Добрый вечер"
+        else:
+            return "Доброй ночи"
+    except (ValueError, TypeError):
+        return "Добрый день"
+
+
+def get_cards_statistics(df: pd.DataFrame) -> list:
+    """Анализ по картам: последние 4 цифры, сумма расходов, кешбэк."""
+    if df.empty or "from" not in df.columns:
+        return []
+
+    df = df[df["state"] == "OK"].copy()
+
+    cards_data = []
+
+    for card_str in df["from"].dropna().unique():
+        # Ищем 4+ цифр в строке
+        matches = re.findall(r"\d{4,}", str(card_str))
+        if not matches:
+            continue
+
+        last_digits = matches[0][-4:]
+        card_df = df[df["from"] == card_str]
+
+        # Извлекаем суммы (суммы отрицательные, берем модуль)
+        total = 0
+        for amount in card_df["amount"]:
+            if pd.notna(amount):
+                try:
+                    # Берем абсолютное значение (суммы отрицательные)
+                    total += abs(float(amount))
+                except (ValueError, TypeError):
+                    # Пропускаем некорректные значения
+                    continue
+
+        # Кешбэк: 1 рубль за каждые 100 рублей
+        cashback = round(total / 100, 2)
+
+        cards_data.append(
+            {
+                "last_digits": last_digits,
+                "total_spent": round(total, 2),
+                "cashback": round(cashback, 2),
+            }
+        )
+
+    return cards_data
+
+
+def get_top_transactions(df: pd.DataFrame, n: int = 5) -> list:
+    """Топ-N транзакций по сумме платежа."""
+    if df.empty:
+        return []
+
+    df = df[df["state"] == "OK"].copy()
+
+    # Извлекаем числовые суммы (берем абсолютное значение)
+    amounts = []
+    for idx, row in df.iterrows():
+        amount_val = row["amount"]
+        if pd.notna(amount_val):
+            try:
+                amount = abs(float(amount_val))
+                amounts.append((idx, amount))
+            except (ValueError, TypeError):
+                # Пропускаем некорректные значения
+                continue
+
+    # Сортируем по сумме (уже абсолютной)
+    amounts.sort(key=lambda x: x[1], reverse=True)
+
+    top_transactions = []
+    seen_descriptions = set()
+
+    for i in range(min(n, len(amounts))):
+        idx, amount = amounts[i]
+        row = df.loc[idx]
+
+        # Обработка даты - ПРОСТОЙ ВАРИАНТ
+        date_value = row["date"]
+        formatted_date = "01.01.2024"
+
+        try:
+            if pd.isna(date_value):
+                pass  # Оставляем значение по умолчанию
+            elif isinstance(date_value, (datetime.datetime, pd.Timestamp)):
+                formatted_date = date_value.strftime("%d.%m.%Y")
+            elif isinstance(date_value, str):
+                # Убираем время если есть
+                date_part = date_value.split()[0] if " " in date_value else date_value
+
+                # Пробуем распарсить
+                for fmt in ["%d.%m.%Y", "%Y-%m-%d"]:
+                    try:
+                        dt = datetime.datetime.strptime(date_part, fmt)
+                        formatted_date = dt.strftime("%d.%m.%Y")
+                        break
+                    except ValueError:
+                        continue
+        except Exception:
+            pass
+
+        # Обработка описания
+        description: Any = row.get("description")
+        if pd.isna(description):
+            description_str = "Без описания"
+            category = "Не указана"
+        else:
+            description_str = str(description)
+            # Берем первое слово как категорию
+            words = description_str.split()
+            category = words[0] if words else "Не указана"
+
+        # Проверяем на дубликаты
+        key = f"{description_str}_{amount}"
+        if key in seen_descriptions:
+            continue
+        seen_descriptions.add(key)
+
+        top_transactions.append(
+            {
+                "date": formatted_date,
+                "amount": amount,
+                "category": category,
+                "description": description_str,
+            }
+        )
+
+        if len(top_transactions) >= n:
+            break
+
+    return top_transactions
+
+
+def get_currency_rates() -> list:
+    """Курсы валют из API apilayer.com."""
+    try:
+        api_key = os.getenv("EXCHANGE_API_KEY")
+        if not api_key:
+            return [
+                {"currency": "USD", "rate": 73.21},
+                {"currency": "EUR", "rate": 87.08},
+            ]
+
+        settings_path = "user_settings.json"
+        if not os.path.exists(settings_path):
+            logger.warning(f"Файл настроек не найден: {settings_path}")
+            return [
+                {"currency": "USD", "rate": 73.21},
+                {"currency": "EUR", "rate": 87.08},
+            ]
+
+        with open(settings_path, "r", encoding="utf-8-sig") as f:
+            settings = json.load(f)
+
+        currencies = settings.get("user_currencies", ["USD", "EUR"])
+
+        # API apilayer.com (Currency Data API)
+        url = "https://api.apilayer.com/exchangerates_data/latest"
+        headers = {"apikey": api_key}
+        params = {"base": "RUB", "symbols": ",".join(currencies)}
+
+        response = requests.get(url, headers=headers, params=params, timeout=10)
+
+        if response.status_code == 200:
+            data = response.json()
+            rates = []
+            for currency, rate in data.get("rates", {}).items():
+                # ВАЖНО: инвертируем курс!
+                # API даёт: 1 RUB = X USD
+                # Нам нужно: 1 USD = 1/X RUB
+                inverse_rate = 1 / rate
+                rates.append({"currency": currency, "rate": round(inverse_rate, 2)})
+            return rates
+        else:
+            logger.warning(f"Ошибка API валют: {response.status_code} - {response.text}")
+            return [
+                {"currency": "USD", "rate": 73.21},
+                {"currency": "EUR", "rate": 87.08},
+            ]
+
+    except Exception as e:
+        logger.error(f"Ошибка получения курсов валют: {e}")
+        return [{"currency": "USD", "rate": 73.21}, {"currency": "EUR", "rate": 87.08}]
+
+
+def get_stock_prices() -> list:
+    """Цены акций из API."""
+    try:
+        # Пробуем разные имена переменных
+        api_key = os.getenv("ALPHA_VANTAGE_API_KEY") or os.getenv("STOCK_API_KEY")
+        if not api_key:
+            return get_stock_prices_stub()
+
+        # Загружаем настройки пользователя (используем utf-8-sig для BOM)
+        with open("user_settings.json", "r", encoding="utf-8-sig") as f:
+            settings = json.load(f)
+
+        stocks = settings.get("user_stocks", ["AAPL", "AMZN", "GOOGL", "MSFT", "TSLA"])
+
+        stock_prices = []
+        for stock in stocks:
+            url = "https://www.alphavantage.co/query"
+            params = {"function": "GLOBAL_QUOTE", "symbol": stock, "apikey": api_key}
+            response = requests.get(url, params=params, timeout=10)
+
+            if response.status_code == 200:
+                data = response.json()
+                if "Global Quote" in data and "05. price" in data["Global Quote"]:
+                    price = float(data["Global Quote"]["05. price"])
+                    stock_prices.append({"stock": stock, "price": round(price, 2)})
+
+        if stock_prices:
+            return stock_prices
+    except Exception:
+        pass
+
+    return get_stock_prices_stub()
+
+
+def get_stock_prices_stub() -> list:
+    """Заглушка для цен акций."""
+    return [
+        {"stock": "AAPL", "price": 150.12},
+        {"stock": "AMZN", "price": 3173.18},
+        {"stock": "GOOGL", "price": 2742.39},
+        {"stock": "MSFT", "price": 296.71},
+        {"stock": "TSLA", "price": 1007.08},
+    ]
+
+
+__all__ = [
+    "load_transactions",
+    "get_greeting",
+    "get_cards_statistics",
+    "get_top_transactions",
+    "get_currency_rates",
+    "get_stock_prices",
+]
