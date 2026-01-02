@@ -1,10 +1,18 @@
 from src.views import main_page
 import json
+from datetime import datetime
 
 if __name__ == "__main__":
-    # Используйте дату, которая есть в данных
-    # Например, если данные до 2021 года:
-    result = main_page("2021-12-15 12:00:00")  # Декабрь 2021
-    # Или
-    # result = main_page("2021-09-05 12:00:00")  # Сентябрь 2021
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    # Используем дату для демонстрации
+    test_date = "2021-12-31 16:44:00"
+
+    print(f"Используемая дата: {test_date}")
+
+    result = main_page(test_date)
+
+    print(f"\nПриветствие: {result['greeting']}")
+    print(f"Время: 16:44")
+
+    # Для полного вывода JSON
+    if input("\nПоказать полный JSON? (y/n): ").lower() == 'y':
+        print("\n" + json.dumps(result, ensure_ascii=False, indent=2))
