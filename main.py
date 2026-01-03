@@ -1,18 +1,49 @@
 from src.views import main_page
+from src.services import investment_bank
 import json
-from datetime import datetime
+import logging
+
+# Отключаем логи
+logging.getLogger().setLevel(logging.CRITICAL)
 
 if __name__ == "__main__":
-    # Используем дату для демонстрации
-    test_date = "2021-12-31 16:44:00"
+    print("=" * 60)
+    print("КУРСОВАЯ РАБОТА: ФИНАНСОВЫЙ ДАШБОРД")
+    print("=" * 60)
 
-    print(f"Используемая дата: {test_date}")
+    # 1. Существующая функция main_page()
+    print("\n1. Функция main_page() - возвращает JSON для веб-страницы")
+    print("Вход: '2021-12-31 16:44:00'")
 
-    result = main_page(test_date)
+    result1 = main_page("2021-12-31 16:44:00")
+    print("Вывод JSON:")
+    print(json.dumps(result1, ensure_ascii=False, indent=2))
 
-    print(f"\nПриветствие: {result['greeting']}")
-    print(f"Время: 16:44")
+    # 2. Новая функция investment_bank() - курсовая
+    print("\n2. Функция investment_bank() - сервис 'Инвесткопилка' (курсовая)")
 
-    # Для полного вывода JSON
-    if input("\nПоказать полный JSON? (y/n): ").lower() == 'y':
-        print("\n" + json.dumps(result, ensure_ascii=False, indent=2))
+    transactions = [
+        {"Дата операции": "2024-01-15", "Сумма операции": 1712},
+        {"Дата операции": "2024-01-20", "Сумма операции": 548.50},
+        {"Дата операции": "2024-02-01", "Сумма операции": 1000},
+    ]
+
+    print(f"Входные данные:")
+    print(f"  • Месяц: 2024-01")
+    print(f"  • Лимит: 50 ₽")
+    print(f"  • Транзакций: {len(transactions)}")
+
+    result2 = investment_bank("2024-01", transactions, 50)
+
+    print(f"\nВывод (JSON-ответ):")
+    print(result2)  # Это будет JSON-строка
+
+    # Парсим JSON чтобы показать структуру
+    try:
+        data = json.loads(result2)
+        print(f"\nСтруктура JSON:")
+        print(f"  • Месяц: {data['month']}")
+        print(f"  • Сумма: {data['investment_total']} ₽")
+        print(f"  • Лимит: {data['rounding_limit']} ₽")
+    except:
+        pass
