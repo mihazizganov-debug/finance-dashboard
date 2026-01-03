@@ -1,3 +1,4 @@
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pandas as pd
@@ -18,7 +19,7 @@ from src.utils import (
 
 @patch("src.utils.pd.read_excel")
 @patch("src.utils.os.path.exists")
-def test_load_transactions_success(mock_exists, mock_read_excel):
+def test_load_transactions_success(mock_exists: Mock, mock_read_excel: Mock) -> None:
     """Тест успешной загрузки транзакций."""
     mock_exists.return_value = True
     mock_df = pd.DataFrame(
@@ -44,7 +45,7 @@ def test_load_transactions_success(mock_exists, mock_read_excel):
 
 
 @patch("src.utils.os.path.exists")
-def test_load_transactions_file_not_found(mock_exists):
+def test_load_transactions_file_not_found(mock_exists: Mock) -> None:
     """Тест когда файл не найден."""
     mock_exists.return_value = False
 
@@ -53,7 +54,7 @@ def test_load_transactions_file_not_found(mock_exists):
 
 
 @patch("src.utils.requests.get")
-def test_get_currency_rates_mock(mock_requests_get):
+def test_get_currency_rates_mock(mock_requests_get: Mock) -> None:
     """Тест get_currency_rates с моками (проще!)."""
     # Мок настроек
     with patch("src.utils.json.load") as mock_json_load:
@@ -79,7 +80,7 @@ def test_get_currency_rates_mock(mock_requests_get):
 # ============ ТЕСТЫ ДЛЯ get_cards_statistics ============
 
 
-def test_get_cards_statistics_with_data():
+def test_get_cards_statistics_with_data() -> None:
     """Тест статистики по картам с данными."""
     df = pd.DataFrame(
         {
@@ -97,14 +98,14 @@ def test_get_cards_statistics_with_data():
     assert result[0]["cashback"] == 3.0  # 300 // 100 = 3
 
 
-def test_get_cards_statistics_empty():
+def test_get_cards_statistics_empty() -> None:
     """Тест статистики по картам с пустыми данными."""
     df = pd.DataFrame()
     result = get_cards_statistics(df)
     assert result == []
 
 
-def test_get_cards_statistics_no_from_column():
+def test_get_cards_statistics_no_from_column() -> None:
     """Тест когда нет колонки 'from'."""
     df = pd.DataFrame({"state": ["OK"], "amount": [-100.0]})
     result = get_cards_statistics(df)
@@ -114,7 +115,7 @@ def test_get_cards_statistics_no_from_column():
 # ============ ТЕСТЫ ДЛЯ get_top_transactions ============
 
 
-def test_get_top_transactions_with_data():
+def test_get_top_transactions_with_data() -> None:
     """Тест топ транзакций с данными."""
     df = pd.DataFrame(
         {
@@ -132,14 +133,14 @@ def test_get_top_transactions_with_data():
     assert result[2]["amount"] == 200.0
 
 
-def test_get_top_transactions_empty():
+def test_get_top_transactions_empty() -> None:
     """Тест топ транзакций с пустыми данными."""
     df = pd.DataFrame()
     result = get_top_transactions(df)
     assert result == []
 
 
-def test_get_top_transactions_n_less_than_available():
+def test_get_top_transactions_n_less_than_available() -> None:
     """Тест когда запрашиваем меньше транзакций чем есть."""
     df = pd.DataFrame(
         {
@@ -157,7 +158,7 @@ def test_get_top_transactions_n_less_than_available():
 # ============ ТЕСТЫ ДЛЯ get_stock_prices_stub ============
 
 
-def test_get_stock_prices_stub():
+def test_get_stock_prices_stub() -> None:
     """Тест заглушки для цен акций."""
     result = get_stock_prices_stub()
     assert len(result) == 5
@@ -169,7 +170,7 @@ def test_get_stock_prices_stub():
 # ============ ТЕСТ ДЛЯ __all__ ============
 
 
-def test_module_exports():
+def test_module_exports() -> None:
     """Тест что модуль правильно экспортирует функции."""
     from src.utils import __all__
 
@@ -185,7 +186,7 @@ def test_module_exports():
         assert export in __all__
 
 
-def test_get_cards_statistics_no_digits_in_card():
+def test_get_cards_statistics_no_digits_in_card() -> None:
     """Тест когда в номере карты нет цифр."""
     df = pd.DataFrame(
         {
@@ -200,7 +201,7 @@ def test_get_cards_statistics_no_digits_in_card():
     assert result == []  # Не должно быть карт без цифр
 
 
-def test_get_cards_statistics_invalid_amounts():
+def test_get_cards_statistics_invalid_amounts() -> None:
     """Тест с некорректными суммами."""
     df = pd.DataFrame(
         {
@@ -220,7 +221,7 @@ def test_get_cards_statistics_invalid_amounts():
 # ============ ТЕСТЫ ДЛЯ ОШИБОК В get_top_transactions ============
 
 
-def test_get_top_transactions_invalid_amounts():
+def test_get_top_transactions_invalid_amounts() -> None:
     """Тест с некорректными суммами в топ транзакциях."""
     df = pd.DataFrame(
         {
@@ -236,7 +237,7 @@ def test_get_top_transactions_invalid_amounts():
     assert result == []  # Нет корректных сумм
 
 
-def test_get_top_transactions_missing_description():
+def test_get_top_transactions_missing_description() -> None:
     """Тест когда нет описания."""
     df = pd.DataFrame(
         {
@@ -257,7 +258,7 @@ def test_get_top_transactions_missing_description():
 
 
 @patch("src.utils.os.getenv")
-def test_get_currency_rates_no_api_key(mock_getenv):
+def test_get_currency_rates_no_api_key(mock_getenv: Mock) -> None:
     """Тест когда нет API ключа."""
     mock_getenv.return_value = None
 
@@ -268,7 +269,7 @@ def test_get_currency_rates_no_api_key(mock_getenv):
 
 
 @patch("src.utils.os.path.exists")
-def test_get_currency_rates_no_settings_file(mock_exists):
+def test_get_currency_rates_no_settings_file(mock_exists: Mock) -> None:
     """Тест когда нет файла настроек."""
     mock_exists.return_value = False
 
@@ -279,7 +280,7 @@ def test_get_currency_rates_no_settings_file(mock_exists):
 
 
 @patch("src.utils.requests.get")
-def test_get_currency_rates_exception(mock_get):
+def test_get_currency_rates_exception(mock_get: Mock) -> None:
     """Тест когда возникает исключение в API."""
     mock_get.side_effect = Exception("API error")
 
@@ -296,7 +297,7 @@ def test_get_currency_rates_exception(mock_get):
 
 
 @patch("src.utils.os.getenv")
-def test_get_stock_prices_no_api_key(mock_getenv):
+def test_get_stock_prices_no_api_key(mock_getenv: Mock) -> None:
     """Тест когда нет API ключа для акций."""
     mock_getenv.return_value = None
 
@@ -307,7 +308,7 @@ def test_get_stock_prices_no_api_key(mock_getenv):
 
 
 @patch("src.utils.requests.get")
-def test_get_stock_prices_exception(mock_get):
+def test_get_stock_prices_exception(mock_get: Mock) -> None:
     """Тест когда возникает исключение в API акций."""
     mock_get.side_effect = Exception("API error")
 
@@ -325,7 +326,7 @@ def test_get_stock_prices_exception(mock_get):
 
 @patch("src.utils.pd.read_excel")
 @patch("src.utils.os.path.exists")
-def test_load_transactions_read_error(mock_exists, mock_read_excel):
+def test_load_transactions_read_error(mock_exists: Mock, mock_read_excel: Mock) -> None:
     """Тест когда чтение Excel вызывает ошибку."""
     mock_exists.return_value = True
     mock_read_excel.side_effect = Exception("Read error")
@@ -336,7 +337,7 @@ def test_load_transactions_read_error(mock_exists, mock_read_excel):
 
 @patch("src.utils.pd.read_excel")
 @patch("src.utils.os.path.exists")
-def test_load_transactions_no_required_columns(mock_exists, mock_read_excel):
+def test_load_transactions_no_required_columns(mock_exists: Mock, mock_read_excel: Mock) -> None:
     """Тест когда в данных нет нужных колонок."""
     mock_exists.return_value = True
     # DataFrame без нужных колонок
@@ -351,7 +352,7 @@ def test_load_transactions_no_required_columns(mock_exists, mock_read_excel):
 
 @patch("src.utils.pd.read_excel")
 @patch("src.utils.os.path.exists")
-def test_load_transactions_date_filter_error(mock_exists, mock_read_excel):
+def test_load_transactions_date_filter_error(mock_exists: Mock, mock_read_excel: Mock) -> None:
     """Тест когда фильтрация по дате вызывает ошибку."""
     mock_exists.return_value = True
     mock_df = pd.DataFrame(
@@ -373,7 +374,7 @@ def test_load_transactions_date_filter_error(mock_exists, mock_read_excel):
 # ============ ТЕСТ ДЛЯ ВСЕХ ФУНКЦИЙ С ПУСТЫМИ ДАННЫМИ ============
 
 
-def test_all_functions_with_empty_dataframe():
+def test_all_functions_with_empty_dataframe() -> None:
     """Комплексный тест всех функций с пустым DataFrame."""
     empty_df = pd.DataFrame()
 
@@ -386,7 +387,7 @@ def test_all_functions_with_empty_dataframe():
     assert top_result == []
 
 
-def test_mock_import():
+def test_mock_import() -> None:
     """Тест, что Mock доступен если нужен."""
     from unittest.mock import Mock
 

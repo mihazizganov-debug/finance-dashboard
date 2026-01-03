@@ -9,7 +9,7 @@ from src.views import main_page
 
 
 @pytest.fixture
-def fake_transactions():
+def fake_transactions() -> pd.DataFrame:
     """Тестовые данные транзакций."""
     return pd.DataFrame(
         {
@@ -25,8 +25,8 @@ def fake_transactions():
 # ============ ТЕСТ ДЛЯ ПРОВЕРКИ MOCK ============
 
 
-def test_mock_object():
-    """Тест что Mock импортирован и может использоваться."""
+def test_mock_object() -> None:
+    """Тест, что Mock импортирован и может использоваться."""
     mock_obj = Mock()
     mock_obj.some_method.return_value = 42
     assert mock_obj.some_method() == 42
@@ -44,7 +44,7 @@ def test_mock_object():
         ("2023-09-05 02:00:00", "Доброй ночи"),
     ],
 )
-def test_greetings_parametrized(time, greeting, fake_transactions):
+def test_greetings_parametrized(time: str, greeting: str, fake_transactions: pd.DataFrame) -> None:
     """Параметризованный тест приветствий."""
     with patch("src.views.load_transactions") as mock_load, patch("src.views.get_greeting") as mock_greet, patch(
         "src.views.get_cards_statistics"
@@ -80,14 +80,14 @@ def test_greetings_parametrized(time, greeting, fake_transactions):
 @patch("src.views.get_currency_rates")
 @patch("src.views.get_stock_prices")
 def test_full_mock(
-    mock_stocks,
-    mock_currency,
-    mock_top,
-    mock_cards,
-    mock_greet,
-    mock_load,
-    fake_transactions,
-):
+    mock_stocks: Mock,
+    mock_currency: Mock,
+    mock_top: Mock,
+    mock_cards: Mock,
+    mock_greet: Mock,
+    mock_load: Mock,
+    fake_transactions: pd.DataFrame,
+) -> None:
     """Полный тест с моками."""
     # Настраиваем моки
     mock_load.return_value = fake_transactions
@@ -134,7 +134,7 @@ def test_full_mock(
 
 
 @patch("src.views.load_transactions")
-def test_empty_data(mock_load):
+def test_empty_data(mock_load: Mock) -> None:
     """Тест с пустыми данными."""
     # Используем Mock
     mock_df = Mock()
@@ -152,7 +152,7 @@ def test_empty_data(mock_load):
 # ============ РЕАЛЬНЫЙ ТЕСТ ============
 
 
-def test_real_integration():
+def test_real_integration() -> None:
     """Реальный интеграционный тест."""
     # Вызываем с реальной датой
     result = main_page("2023-09-05 12:00:00")

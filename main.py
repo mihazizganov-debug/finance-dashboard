@@ -1,6 +1,9 @@
 import json
 import logging
 
+import pandas as pd
+
+from src.reports import spending_by_weekday
 from src.services import investment_bank
 from src.views import main_page
 
@@ -51,3 +54,58 @@ if __name__ == "__main__":
         print(f"\n❌ Ошибка валидации: {e}")
     except Exception as e:
         print(f"\n❌ Непредвиденная ошибка: {e}")
+
+    # 3. Новая функция - отчет "Траты по дням недели"
+    print("\n" + "=" * 60)
+    print("3. Функция spending_by_weekday() - отчет 'Траты по дням недели'")
+
+    # Создаем тестовый DataFrame
+    test_data = {
+        "Дата операции": [
+            "2024-01-15",
+            "2024-01-16",
+            "2024-01-17",
+            "2024-01-18",
+            "2024-02-15",
+            "2024-02-16",
+            "2024-02-17",
+            "2024-02-18",
+            "2024-03-15",
+            "2024-03-16",
+            "2024-03-17",
+            "2024-03-18",
+        ],
+        "Сумма операции": [1000, 1500, 2000, 2500, 1200, 1700, 2200, 2700, 1400, 1900, 2400, 2900],
+        "Категория": ["Еда", "Транспорт", "Развлечения", "Покупки"] * 3,
+        "Описание": ["Обед", "Такси", "Кино", "Магазин"] * 3,
+    }
+
+    df = pd.DataFrame(test_data)
+
+    print("\nТестовые данные (DataFrame):")
+    print(f"  • Строк: {len(df)}")
+    print(f"  • Колонок: {len(df.columns)}")
+    print(f"  • Колонки: {list(df.columns)}")
+
+    print("\nЗапуск отчета с датой '2024-03-20'...")
+    try:
+        result3 = spending_by_weekday(df, "2024-03-20")
+        data3 = json.loads(result3)
+
+        print("\nРезультат отчета:")
+        print(f"  • Отчет: {data3['report']}")
+        print(f"  • Период: {data3['period']['start']} - {data3['period']['end']}")
+        print(f"  • Статус: {data3['status']}")
+
+        print("\nСредние траты по дням недели:")
+        for day, amount in data3["data"].items():
+            print(f"  • {day}: {amount} ₽")
+
+    except ValueError as e:
+        print(f"\n❌ Ошибка валидации: {e}")
+    except Exception as e:
+        print(f"\n❌ Непредвиденная ошибка: {e}")
+
+    print("\n" + "=" * 60)
+    print("✅ ДЕМОНСТРАЦИЯ ВСЕХ ТРЕХ ФУНКЦИЙ ЗАВЕРШЕНА")
+    print("=" * 60)

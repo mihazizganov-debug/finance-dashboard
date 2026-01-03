@@ -1,17 +1,15 @@
 import json
 import os
 import sys
+from typing import Any
 
 import pytest
-
-# Добавляем путь к src для импорта
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.services import investment_bank
 
 
 # 1. БАЗОВЫЕ ТЕСТЫ
-def test_investment_bank_basic():
+def test_investment_bank_basic() -> None:
     """Базовый тест работы функции"""
     result = investment_bank("2024-01", [], 50)
     data = json.loads(result)
@@ -20,7 +18,7 @@ def test_investment_bank_basic():
     assert data["investment_total"] == 0.0
 
 
-def test_investment_bank_example():
+def test_investment_bank_example() -> None:
     """Пример из ТЗ: 1712 ₽ → 38 ₽"""
     transactions = [{"Дата операции": "2024-01-01", "Сумма операции": 1712}]
     result = investment_bank("2024-01", transactions, 50)
@@ -28,7 +26,7 @@ def test_investment_bank_example():
     assert data["investment_total"] == 38.0
 
 
-def test_investment_bank_multiple():
+def test_investment_bank_multiple() -> None:
     """Несколько транзакций"""
     transactions = [
         {"Дата операции": "2024-01-15", "Сумма операции": 1712},
@@ -40,7 +38,7 @@ def test_investment_bank_multiple():
 
 
 # 2. ТЕСТЫ РАЗНЫХ ЛИМИТОВ
-def test_investment_bank_limit_10():
+def test_investment_bank_limit_10() -> None:
     """Лимит 10"""
     transactions = [{"Дата операции": "2024-01-01", "Сумма операции": 1234}]
     result = investment_bank("2024-01", transactions, 10)
@@ -48,7 +46,7 @@ def test_investment_bank_limit_10():
     assert data["investment_total"] == 6.0
 
 
-def test_investment_bank_limit_50():
+def test_investment_bank_limit_50() -> None:
     """Лимит 50"""
     transactions = [{"Дата операции": "2024-01-01", "Сумма операции": 1234}]
     result = investment_bank("2024-01", transactions, 50)
@@ -56,7 +54,7 @@ def test_investment_bank_limit_50():
     assert data["investment_total"] == 16.0
 
 
-def test_investment_bank_limit_100():
+def test_investment_bank_limit_100() -> None:
     """Лимит 100"""
     transactions = [{"Дата операции": "2024-01-01", "Сумма операции": 1234}]
     result = investment_bank("2024-01", transactions, 100)
@@ -65,7 +63,7 @@ def test_investment_bank_limit_100():
 
 
 # 3. ТЕСТЫ ФИЛЬТРАЦИИ ПО МЕСЯЦУ
-def test_investment_bank_month_filter():
+def test_investment_bank_month_filter() -> None:
     """Фильтрация по месяцу"""
     transactions = [
         {"Дата операции": "2024-01-15", "Сумма операции": 1001},
@@ -76,11 +74,11 @@ def test_investment_bank_month_filter():
     assert data["investment_total"] > 0
 
 
-def test_investment_bank_month_filter_correct():
+def test_investment_bank_month_filter_correct() -> None:
     """Фильтрация по месяцу - правильный тест"""
     transactions = [
-        {"Дата операции": "2024-01-15", "Сумма операции": 1001},  # Январь, округляется
-        {"Дата операции": "2024-02-15", "Сумма операции": 2001},  # Февраль, не учитывается
+        {"Дата операции": "2024-01-15", "Сумма операции": 1001},
+        {"Дата операции": "2024-02-15", "Сумма операции": 2001},
     ]
     result = investment_bank("2024-01", transactions, 50)
     data = json.loads(result)
@@ -88,7 +86,7 @@ def test_investment_bank_month_filter_correct():
     assert data["investment_total"] == 49.0
 
 
-def test_investment_bank_wrong_month():
+def test_investment_bank_wrong_month() -> None:
     """Транзакции не в том месяце"""
     transactions = [
         {"Дата операции": "2024-02-15", "Сумма операции": 1000},
@@ -99,7 +97,7 @@ def test_investment_bank_wrong_month():
 
 
 # 4. ТЕСТЫ ОШИБОК
-def test_investment_bank_invalid_limit():
+def test_investment_bank_invalid_limit() -> None:
     """Некорректный лимит"""
     transactions = [{"Дата операции": "2024-01-01", "Сумма операции": 1000}]
 
@@ -107,7 +105,7 @@ def test_investment_bank_invalid_limit():
         investment_bank("2024-01", transactions, 75)
 
 
-def test_investment_bank_invalid_month():
+def test_investment_bank_invalid_month() -> None:
     """Некорректный месяц"""
     transactions = [{"Дата операции": "2024-01-01", "Сумма операции": 1000}]
 
@@ -116,16 +114,16 @@ def test_investment_bank_invalid_month():
 
 
 # 5. ТЕСТЫ НЕКОРРЕКТНЫХ ДАННЫХ
-def test_investment_bank_empty():
+def test_investment_bank_empty() -> None:
     """Пустой список транзакций"""
     result = investment_bank("2024-01", [], 50)
     data = json.loads(result)
     assert data["investment_total"] == 0.0
 
 
-def test_investment_bank_invalid_amount():
+def test_investment_bank_invalid_amount() -> None:
     """Некорректная сумма"""
-    transactions = [
+    transactions: list[dict[str, Any]] = [
         {"Дата операции": "2024-01-01", "Сумма операции": "не число"},
     ]
     result = investment_bank("2024-01", transactions, 50)
@@ -133,11 +131,11 @@ def test_investment_bank_invalid_amount():
     assert data["investment_total"] == 0.0
 
 
-def test_investment_bank_missing_fields():
+def test_investment_bank_missing_fields() -> None:
     """Отсутствуют поля"""
-    transactions = [
-        {"Дата операции": "2024-01-01"},  # Нет суммы
-        {"Сумма операции": 1000},  # Нет даты
+    transactions: list[dict[str, Any]] = [
+        {"Дата операции": "2024-01-01"},
+        {"Сумма операции": 1000},
     ]
     result = investment_bank("2024-01", transactions, 50)
     data = json.loads(result)
@@ -145,7 +143,7 @@ def test_investment_bank_missing_fields():
 
 
 # 6. ТЕСТ JSON-СТРУКТУРЫ
-def test_investment_bank_json_structure():
+def test_investment_bank_json_structure() -> None:
     """Проверка структуры JSON"""
     transactions = [{"Дата операции": "2024-01-01", "Сумма операции": 1000}]
     result = investment_bank("2024-01", transactions, 50)
