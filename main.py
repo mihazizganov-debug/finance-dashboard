@@ -1,7 +1,8 @@
-from src.views import main_page
-from src.services import investment_bank
 import json
 import logging
+
+from src.services import investment_bank
+from src.views import main_page
 
 # Отключаем логи
 logging.getLogger().setLevel(logging.CRITICAL)
@@ -28,22 +29,25 @@ if __name__ == "__main__":
         {"Дата операции": "2024-02-01", "Сумма операции": 1000},
     ]
 
-    print(f"Входные данные:")
-    print(f"  • Месяц: 2024-01")
-    print(f"  • Лимит: 50 ₽")
+    print("Входные данные:")
+    print("  • Месяц: 2024-01")
+    print("  • Лимит: 50 ₽")
     print(f"  • Транзакций: {len(transactions)}")
 
-    result2 = investment_bank("2024-01", transactions, 50)
-
-    print(f"\nВывод (JSON-ответ):")
-    print(result2)  # Это будет JSON-строка
-
-    # Парсим JSON чтобы показать структуру
     try:
+        result2 = investment_bank("2024-01", transactions, 50)
+
+        print("\nВывод (JSON-ответ):")  # ← Убрал f
+        print(result2)  # Это будет JSON-строка
+
+        # Парсим JSON чтобы показать структуру
         data = json.loads(result2)
-        print(f"\nСтруктура JSON:")
+        print("\nСтруктура JSON:")  # ← Убрал f
         print(f"  • Месяц: {data['month']}")
         print(f"  • Сумма: {data['investment_total']} ₽")
         print(f"  • Лимит: {data['rounding_limit']} ₽")
-    except:
-        pass
+
+    except ValueError as e:
+        print(f"\n❌ Ошибка валидации: {e}")
+    except Exception as e:
+        print(f"\n❌ Непредвиденная ошибка: {e}")

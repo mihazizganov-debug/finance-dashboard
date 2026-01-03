@@ -1,13 +1,10 @@
-import json
 import datetime
+import json
 import logging
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 # Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -48,11 +45,11 @@ def investment_bank(month: str, transactions: List[Dict[str, Any]], limit: int) 
         """Обрабатывает одну транзакцию и возвращает сумму для копилки."""
         try:
             # Проверяем, что транзакция в нужном месяце
-            if not is_transaction_in_month(transaction.get('Дата операции', '')):
+            if not is_transaction_in_month(transaction.get("Дата операции", "")):
                 return 0.0
 
             # Получаем сумму операции
-            amount = transaction.get('Сумма операции', 0)
+            amount = transaction.get("Сумма операции", 0)
             if not isinstance(amount, (int, float)):
                 logger.warning(f"Некорректная сумма операции: {amount}")
                 return 0.0
@@ -72,9 +69,7 @@ def investment_bank(month: str, transactions: List[Dict[str, Any]], limit: int) 
     logger.info(f"Итоговая сумма для Инвесткопилки: {total_investment:.2f}")
 
     # Возвращаем JSON-строку как требует ТЗ
-    return json.dumps({
-        "month": month,
-        "investment_total": round(total_investment, 2),
-        "rounding_limit": limit,
-        "currency": "RUB"
-    }, ensure_ascii=False)
+    return json.dumps(
+        {"month": month, "investment_total": round(total_investment, 2), "rounding_limit": limit, "currency": "RUB"},
+        ensure_ascii=False,
+    )

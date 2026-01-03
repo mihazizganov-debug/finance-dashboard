@@ -1,7 +1,8 @@
-import pytest
-import sys
-import os
 import json
+import os
+import sys
+
+import pytest
 
 # Добавляем путь к src для импорта
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
