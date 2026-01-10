@@ -19,7 +19,9 @@ if __name__ == "__main__":
     print("\n1. Функция main_page() - возвращает JSON для веб-страницы")
     print("Вход: '2021-12-31 16:44:00'")
 
-    result1 = main_page("2021-12-31 16:44:00")
+    json_string = main_page("2021-12-31 16:44:00")
+    result1 = json.loads(json_string)
+
     print("Вывод JSON:")
     print(json.dumps(result1, ensure_ascii=False, indent=2))
 

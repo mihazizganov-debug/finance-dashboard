@@ -22,6 +22,83 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+# ============ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ============
+
+def safe_extract_amount(value: Any) -> float:
+    """
+    Безопасно извлекает сумму из значения.
+    Возвращает абсолютное значение суммы.
+    """
+    if pd.isna(value):
+        return 0.0
+    try:
+        return abs(float(value))
+    except (ValueError, TypeError):
+        return 0.0
+
+
+def extract_last_digits(card_str: Any) -> str:
+    """
+    Извлекает последние 4 цифры из номера карты.
+    Возвращает пустую строку если цифр нет.
+    """
+    if pd.isna(card_str):
+        return ""
+
+    # Ищем 4+ цифр в строке
+    matches = re.findall(r"\d{4,}", str(card_str))
+    if not matches:
+        return ""
+
+    return matches[0][-4:]  # Последние 4 цифры
+
+
+def format_date_for_transaction(date_value: Any) -> str:
+    """
+    Форматирует дату для транзакции в формат 'dd.mm.yyyy'.
+    Возвращает значение по умолчанию при ошибке.
+    """
+    if pd.isna(date_value):
+        return "01.01.2024"  # Значение по умолчанию
+
+    try:
+        if isinstance(date_value, (datetime.datetime, pd.Timestamp)):
+            return date_value.strftime("%d.%m.%Y")
+        elif isinstance(date_value, str):
+            # Убираем время если есть
+            date_part = date_value.split()[0] if " " in date_value else date_value
+
+            # Пробуем распарсить
+            for fmt in ["%d.%m.%Y", "%Y-%m-%d"]:
+                try:
+                    dt = datetime.datetime.strptime(date_part, fmt)
+                    return dt.strftime("%d.%m.%Y")
+                except ValueError:
+                    continue
+    except Exception:
+        pass
+
+    return "01.01.2024"
+
+
+def extract_category_from_description(description: Any) -> tuple[str, str]:
+    """
+    Извлекает категорию и описание из строки описания.
+    Возвращает кортеж (категория, описание).
+    """
+    if pd.isna(description):
+        return "Не указана", "Без описания"
+
+    description_str = str(description)
+    # Берем первое слово как категорию
+    words = description_str.split()
+    category = words[0] if words else "Не указана"
+
+    return category, description_str
+
+
+# ============ ОСНОВНЫЕ ФУНКЦИИ ============
+
 def load_transactions(date_string: str) -> pd.DataFrame:
     """
     Загружает транзакции из Excel файла и фильтрует по текущему месяцу.
@@ -34,7 +111,7 @@ def load_transactions(date_string: str) -> pd.DataFrame:
     Returns:
     --------
     pd.DataFrame
-        DataFrame с транзакциями за текущий месяц или пустой DataFrame в случае ошибки
+        DataFrame с транзакций за текущий месяц или пустой DataFrame в случае ошибки
     """
     try:
         # Исправляем: используем правильные переменные
@@ -140,24 +217,19 @@ def get_cards_statistics(df: pd.DataFrame) -> list:
     cards_data = []
 
     for card_str in df["from"].dropna().unique():
-        # Ищем 4+ цифр в строке
-        matches = re.findall(r"\d{4,}", str(card_str))
-        if not matches:
-            continue
+        # Извлекаем последние 4 цифры
+        last_digits = extract_last_digits(card_str)
+        if not last_digits:
+            continue  # Пропускаем карты без цифр
 
-        last_digits = matches[0][-4:]
         card_df = df[df["from"] == card_str]
 
         # Извлекаем суммы (суммы отрицательные, берем модуль)
         total = 0
         for amount in card_df["amount"]:
             if pd.notna(amount):
-                try:
-                    # Берем абсолютное значение (суммы отрицательные)
-                    total += abs(float(amount))
-                except (ValueError, TypeError):
-                    # Пропускаем некорректные значения
-                    continue
+                # Используем безопасное извлечение суммы
+                total += safe_extract_amount(amount)
 
         # Кешбэк: 1 рубль за каждые 100 рублей
         cashback = round(total / 100, 2)
@@ -185,12 +257,9 @@ def get_top_transactions(df: pd.DataFrame, n: int = 5) -> list:
     for idx, row in df.iterrows():
         amount_val = row["amount"]
         if pd.notna(amount_val):
-            try:
-                amount = abs(float(amount_val))
+            amount = safe_extract_amount(amount_val)
+            if amount > 0:
                 amounts.append((idx, amount))
-            except (ValueError, TypeError):
-                # Пропускаем некорректные значения
-                continue
 
     # Сортируем по сумме (уже абсолютной)
     amounts.sort(key=lambda x: x[1], reverse=True)
@@ -202,40 +271,12 @@ def get_top_transactions(df: pd.DataFrame, n: int = 5) -> list:
         idx, amount = amounts[i]
         row = df.loc[idx]
 
-        # Обработка даты - ПРОСТОЙ ВАРИАНТ
+        # Обработка даты
         date_value = row["date"]
-        formatted_date = "01.01.2024"
-
-        try:
-            if pd.isna(date_value):
-                pass  # Оставляем значение по умолчанию
-            elif isinstance(date_value, (datetime.datetime, pd.Timestamp)):
-                formatted_date = date_value.strftime("%d.%m.%Y")
-            elif isinstance(date_value, str):
-                # Убираем время если есть
-                date_part = date_value.split()[0] if " " in date_value else date_value
-
-                # Пробуем распарсить
-                for fmt in ["%d.%m.%Y", "%Y-%m-%d"]:
-                    try:
-                        dt = datetime.datetime.strptime(date_part, fmt)
-                        formatted_date = dt.strftime("%d.%m.%Y")
-                        break
-                    except ValueError:
-                        continue
-        except Exception:
-            pass
+        formatted_date = format_date_for_transaction(date_value)
 
         # Обработка описания
-        description: Any = row.get("description")
-        if pd.isna(description):
-            description_str = "Без описания"
-            category = "Не указана"
-        else:
-            description_str = str(description)
-            # Берем первое слово как категорию
-            words = description_str.split()
-            category = words[0] if words else "Не указана"
+        category, description_str = extract_category_from_description(row.get("description"))
 
         # Проверяем на дубликаты
         key = f"{description_str}_{amount}"
@@ -246,7 +287,7 @@ def get_top_transactions(df: pd.DataFrame, n: int = 5) -> list:
         top_transactions.append(
             {
                 "date": formatted_date,
-                "amount": amount,
+                "amount": round(amount, 2),
                 "category": category,
                 "description": description_str,
             }

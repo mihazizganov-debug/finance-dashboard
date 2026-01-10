@@ -1,7 +1,9 @@
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pandas as pd
 import pytest
+import json
 
 from src.views import main_page
 
@@ -62,7 +64,8 @@ def test_greetings_parametrized(time: str, greeting: str, fake_transactions: pd.
         mock_stocks.return_value = []
 
         # Вызываем
-        result = main_page(time)
+        result_str = main_page(time)
+        result = json.loads(result_str)
 
         # Проверяем
         assert result["greeting"] == greeting
@@ -112,7 +115,8 @@ def test_full_mock(
     mock_stocks.side_effect = mock_stocks_response
 
     # Вызываем
-    result = main_page("2023-09-05 12:00:00")
+    result_str = main_page("2023-09-05 12:00:00")
+    result = json.loads(result_str)
 
     # Проверяем структуру
     assert result["greeting"] == "Добрый день"
@@ -141,7 +145,8 @@ def test_empty_data(mock_load: Mock) -> None:
     mock_df.empty = True
     mock_load.return_value = mock_df
 
-    result = main_page("2023-09-05 12:00:00")
+    result_str = main_page("2023-09-05 12:00:00")
+    result = json.loads(result_str)
 
     # Должен вернуть валидный JSON
     assert isinstance(result, dict)
@@ -155,7 +160,8 @@ def test_empty_data(mock_load: Mock) -> None:
 def test_real_integration() -> None:
     """Реальный интеграционный тест."""
     # Вызываем с реальной датой
-    result = main_page("2023-09-05 12:00:00")
+    result_str = main_page("2023-09-05 12:00:00")
+    result = json.loads(result_str)
 
     # Проверяем базовые требования
     assert isinstance(result, dict)
@@ -164,6 +170,7 @@ def test_real_integration() -> None:
     assert "top_transactions" in result
     assert "currency_rates" in result
     assert "stock_prices" in result
+    assert "date" in result
 
     # Проверяем типы
     assert isinstance(result["greeting"], str)
@@ -171,6 +178,7 @@ def test_real_integration() -> None:
     assert isinstance(result["top_transactions"], list)
     assert isinstance(result["currency_rates"], list)
     assert isinstance(result["stock_prices"], list)
+    assert isinstance(result["date"], str)
 
     # Логика топ-транзакций
     assert len(result["top_transactions"]) <= 5
